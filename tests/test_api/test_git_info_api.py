@@ -1,4 +1,5 @@
 import json
+from contextlib import contextmanager
 from unittest.mock import patch
 
 import pytest
@@ -10,6 +11,28 @@ from app.schema.external_git_repo_schema import GitHubCheckerSchema
 from tests.conftest import db, client, redis, container
 
 from tests.factories.user_factory import UserFactory
+
+
+@contextmanager
+def mock_get_request_to_external_repo_api(mock_value, status: status):
+    with patch("app.repository.external_git_repo_repository.requests.get") as mock_get:
+        mock_response = mock_get.return_value
+        mock_response.status_code = status
+        mock_response.json.return_value = mock_value
+        try:
+            yield mock_response
+        finally:
+            pass
+
+
+def generate_auth_user(db):
+    return UserFactory(logged_in=True, session=db)
+
+
+def generate_header(access_token: str):
+    return {
+        "Authorization": f"Bearer {access_token}"
+    }
 
 
 @pytest.mark.parametrize("star_number, fork_number, expected_is_popular,owner,repo", [
@@ -24,29 +47,21 @@ def test_repo_api_fetch_data_and_save_in_cache_correctly(star_number, fork_numbe
     )
     cache_key = f"repo:{owner}:{repo}"
 
-    UserFactory._meta.sqlalchemy_session = db
-
-    user = UserFactory(logged_in=True)
-    headers = {
-        "Authorization": f"Bearer {user.access_token}"
+    auth_user = generate_auth_user(db)
+    headers = generate_header(auth_user.access_token)
+    mock_value = {
+        "stargazers_count": star_number,
+        "forks_count": fork_number
     }
-    with patch("app.repository.external_git_repo_repository.requests.get") as mock_get:
-        mock_response = mock_get.return_value
-        mock_response.status_code = status.HTTP_200_OK
-        mock_response.json.return_value = {
-            "stargazers_count": star_number,
-            "forks_count": fork_number
-        }
-
-        res = client.get(f'/api/v1/repositories/popularity/github/{owner}/{repo}', headers=headers)
-        res_body = res.json()
-
+    with mock_get_request_to_external_repo_api(mock_value=mock_value, status=status.HTTP_200_OK) as mock_get:
+        response = client.get(f'/api/v1/repositories/popularity/github/{owner}/{repo}', headers=headers)
+        json_response = response.json()
         try:
-            user_data = GitHubCheckerSchema(**res_body)
+            user_data = GitHubCheckerSchema(**json_response)
         except ValidationError as e:
             assert False, f"Response validation error: {e}"
 
-        assert res.status_code == status.HTTP_200_OK
+        assert response.status_code == status.HTTP_200_OK
         assert user_data.is_popular == expected_is_popular
 
         cache_data = redis_repository.get(cache_key)
@@ -64,23 +79,15 @@ def test_repo_api_through_external_error_porperly(client, db, redis, container):
     repo = "somerepo"
 
     mock_value = {
-            "message": "Not Found",
-            "documentation_url": "https://docs.github.com/rest/repos/repos#get-a-repository"
-        }
+        "message": "Not Found",
+        "documentation_url": "https://docs.github.com/rest/repos/repos#get-a-repository"
+    }
 
     cache_key = f"repo:{owner}:{repo}"
 
-    UserFactory._meta.sqlalchemy_session = db
-
-    user = UserFactory(logged_in=True)
-    headers = {
-        "Authorization": f"Bearer {user.access_token}"
-    }
-    with patch("app.repository.external_git_repo_repository.requests.get") as mock_get:
-        mock_response = mock_get.return_value
-        mock_response.status_code = status.HTTP_404_NOT_FOUND
-        mock_response.json.return_value = mock_value
-
+    auth_user = generate_auth_user(db)
+    headers = generate_header(auth_user.access_token)
+    with mock_get_request_to_external_repo_api(mock_value=mock_value, status=status.HTTP_404_NOT_FOUND) as mock_get:
         res = client.get(f'/api/v1/repositories/popularity/github/{owner}/{repo}', headers=headers)
         res_body = res.json()
 
@@ -91,4 +98,3 @@ def test_repo_api_through_external_error_porperly(client, db, redis, container):
         cache_data = redis_repository.get(cache_key)
 
         assert not cache_data
-
