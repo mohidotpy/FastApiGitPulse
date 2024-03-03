@@ -1,9 +1,3 @@
-import json
-from unittest.mock import patch
-
-from psycopg2 import IntegrityError
-
-from app.core.container import Container
 from app.core.exceptions import DuplicatedError
 from tests.factories.user_factory import UserFactory, UserEntityFactory
 
