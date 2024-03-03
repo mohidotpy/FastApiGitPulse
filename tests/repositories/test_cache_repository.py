@@ -7,6 +7,10 @@ from app.core.config import setting
 CACHE_KEY = "repo:somone:somrepo"
 
 
+def generate_random_star_count_and_forks_count():
+    return randint(0, 1000), randint(0, 1000)
+
+
 def generate_external_git_info_and_set_into_cache(redis_repo, stargazers_count, forks_count):
     data = {
         "stargazers_count": stargazers_count,
@@ -17,8 +21,7 @@ def generate_external_git_info_and_set_into_cache(redis_repo, stargazers_count, 
 
 
 def test_cache_repo_can_set_and_get_data_into_redis_successfully(client, container, redis):
-    stargazers_count = randint(0, 1000)
-    forks_count = randint(0, 1000)
+    stargazers_count, forks_count = generate_random_star_count_and_forks_count()
     redis_repo = container.redis_repository()
 
     cache_data_from_redis = redis_repo.get(CACHE_KEY)
@@ -38,8 +41,7 @@ def test_get_non_existent_key_returns_none(client, container, redis):
 
 
 def test_cache_repo_can_update_data_in_redis_successfully(client, container, redis):
-    initial_stargazers_count = randint(0, 1000)
-    initial_forks_count = randint(0, 1000)
+    initial_stargazers_count, initial_forks_count = generate_random_star_count_and_forks_count()
 
     redis_repo = container.redis_repository()
 
@@ -52,8 +54,7 @@ def test_cache_repo_can_update_data_in_redis_successfully(client, container, red
     assert cache_data_from_redis['stargazers_count'] == initial_stargazers_count, "Stargazers count was not created"
     assert cache_data_from_redis['forks_count'] == initial_forks_count, "Forks count was not created"
 
-    updated_stargazers_count = randint(0, 1000)
-    updated_forks_count = randint(0, 1000)
+    updated_stargazers_count, updated_forks_count = generate_random_star_count_and_forks_count()
 
     generate_external_git_info_and_set_into_cache(redis_repo, updated_stargazers_count, updated_forks_count)
     cache_data_from_redis = json.loads(redis_repo.get(CACHE_KEY))
