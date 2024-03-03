@@ -3,6 +3,7 @@ from datetime import datetime
 from unittest.mock import patch
 
 from app.core.config import setting
+from app.core.exceptions import AuthError
 from app.core.security import decode_jwt
 from app.entities.user import User
 from app.schema.auth_schema import SignUpSchema, SignInSchema
@@ -27,7 +28,7 @@ def test_auth_service_sign_up_user_called_correct_method_and_return_user_entity(
         assert type(user) == User
 
 
-def test_auth_service_sign_in_user_to_db_properly(container):
+def test_auth_service_sign_in_read_user_from_repository_and_validate_user_and_return_access_token(container):
     auth_service_instance = container.auth_service()
     user_entity = UserEntityFactory(password=PASSWORD)
     with patch('app.repository.user_repository.UserRepository.read_by_options') as mock_read_by_options:
@@ -58,3 +59,34 @@ def test_auth_service_sign_in_user_to_db_properly(container):
 
         assert math.isclose(total_diff_minutes, setting.ACCESS_TOKEN_EXPIRE_MINUTES,
                             abs_tol=margin_of_error_minutes), f"Expiration difference is outside the acceptable range: {total_diff_minutes} vs {setting.ACCESS_TOKEN_EXPIRE_MINUTES}"
+
+
+def test_auth_service_sign_in_raise_exception_when_password_is_incorrect(container):
+    auth_service_instance = container.auth_service()
+    user_entity = UserEntityFactory(password=PASSWORD)
+    with patch('app.repository.user_repository.UserRepository.read_by_options') as mock_read_by_options:
+        mock_read_by_options.return_value = {
+            "founds": [user_entity],
+            'search_options': {'page': 1, 'page_size': 20, 'ordering': '-id', 'total_count': 1},
+        }
+
+        user_schema = SignInSchema(email=user_entity.email, password="somewrongpass")
+        try:
+            auth_service_instance.sign_in(user_schema)
+        except AuthError as e:
+            assert e.detail == "Incorrect email or password"
+
+
+def test_auth_service_sign_in_raise_exception_when_email_is_not_found(container):
+    auth_service_instance = container.auth_service()
+    with patch('app.repository.user_repository.UserRepository.read_by_options') as mock_read_by_options:
+        mock_read_by_options.return_value = {
+            "founds": [],
+            'search_options': {'page': 1, 'page_size': 20, 'ordering': '-id', 'total_count': 0},
+        }
+
+        user_schema = SignInSchema(email="somerandemail@gmail.com", password=PASSWORD)
+        try:
+            auth_service_instance.sign_in(user_schema)
+        except AuthError as e:
+            assert e.detail == "Incorrect email or password"
