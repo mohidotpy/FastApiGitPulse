@@ -15,6 +15,15 @@ class UserEntityFactory(factory.Factory):
         lambda x: get_password_hash(factory.Faker('password', length=12).evaluate(None, None, {"locale": True})))
     user_token = factory.Faker('uuid4')
 
+    @classmethod
+    def _create(cls, model_class, *args, **kwargs):
+        if 'password' in kwargs:
+            plain_password = kwargs.pop('password')
+            hashed_password = get_password_hash(plain_password)
+            kwargs['password'] = hashed_password
+
+        return super(UserEntityFactory, cls)._create(model_class, *args, **kwargs)
+
 
 class UserFactory(UserEntityFactory, factory.alchemy.SQLAlchemyModelFactory):
     class Meta:
@@ -25,11 +34,6 @@ class UserFactory(UserEntityFactory, factory.alchemy.SQLAlchemyModelFactory):
     def _create(cls, model_class, *args, **kwargs):
         logged_in = kwargs.pop('logged_in', False)
         session = kwargs.pop('session', None)  # Extract the session from kwargs
-
-        if 'password' in kwargs:
-            plain_password = kwargs.pop('password')
-            hashed_password = get_password_hash(plain_password)
-            kwargs['password'] = hashed_password
 
         if session:
             assert isinstance(session, Session), "Provided session is not an instance of SQLAlchemy Session"
