@@ -1,14 +1,9 @@
 import json
-from random import randint
-from unittest.mock import patch
 
 from app.core.config import setting
+from tests.repositories.utils import generate_random_star_count_and_forks_count
 
 CACHE_KEY = "repo:somone:somrepo"
-
-
-def generate_random_star_count_and_forks_count():
-    return randint(0, 1000), randint(0, 1000)
 
 
 def generate_external_git_info_and_set_into_cache(redis_repo, stargazers_count, forks_count):
