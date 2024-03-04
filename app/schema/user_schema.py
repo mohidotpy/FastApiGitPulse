@@ -3,8 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel
 
-from app.schema.base_schema import FindBase
-from app.util.schema import AllOptional
+from app.schema.base_schema import FindBase, AllOptional
 
 
 class BaseUser(BaseModel):
