@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 import pytest
+from starlette import status
 
 from app.core.container import Container
 from app.repository.exceptions import ExternalAPIError
@@ -40,9 +41,9 @@ def test_external_repo_information_store_successfully_in_cache(redis):
 
 
 @pytest.mark.parametrize("status_code, external_api_detail_error", [
-    (400, {"message": "Bad Request", "documentation_url": "https://docs.github.com"}),
-    (401, {"message": "Bad Credentials", "documentation_url": "https://docs.github.com"}),
-    (404, {"message": "Not Found", "documentation_url": "https://docs.github.com"})
+    (status.HTTP_400_BAD_REQUEST, {"message": "Bad Request", "documentation_url": "https://docs.github.com"}),
+    (status.HTTP_401_UNAUTHORIZED, {"message": "Bad Credentials", "documentation_url": "https://docs.github.com"}),
+    (status.HTTP_404_NOT_FOUND, {"message": "Not Found", "documentation_url": "https://docs.github.com"})
 ])
 def test_external_repo_information_raise_exception_in_case_of_error(redis, status_code,external_api_detail_error):
     redis_repository = Container.redis_repository(
