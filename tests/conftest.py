@@ -5,7 +5,6 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from alembic.config import Config
 from alembic import command
-from sqlalchemy_utils import drop_database
 
 from app.core.config import setting
 
@@ -14,10 +13,11 @@ from fastapi.testclient import TestClient
 from app.core.container import Container
 from app.core.database import Database
 from app.main import app
+from sqlalchemy_utils import drop_database
 
 
 @pytest.fixture
-def db():
+def db_session():
     if sqlalchemy_utils.database_exists(setting.DATABASE_URI):
         drop_database(setting.DATABASE_URI)
 
@@ -30,11 +30,11 @@ def db():
     alembic_cfg = Config(setting.ALEMBIC_INI_PATH)
     command.upgrade(alembic_cfg, "head")
 
-    db = TestingSessionLocal()
+    session = TestingSessionLocal()
     try:
-        yield db
+        yield session
     finally:
-        db.close()
+        session.close()
         drop_database(setting.DATABASE_URI)
 
 
@@ -44,15 +44,15 @@ def container():
 
 
 @pytest.fixture
-def client(db):
+def client(db_session):
     def override_get_db():
-        yield db
+        yield db_session
 
     app.dependency_overrides[Database.session] = override_get_db
     return TestClient(app)
 
 
-@pytest.fixture(scope="session", autouse=True)
+@pytest.fixture
 def redis():
     redis_connection = Redis(
         host=setting.REDIS_HOST,
