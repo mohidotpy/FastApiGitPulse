@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.auth import auth_router
-from app.api.v1.github_checker import repo_router
+from app.api.v1.git_info import repo_router
 from app.api.v1.user import user_router
 
 v1_routers = APIRouter(prefix="/v1")
