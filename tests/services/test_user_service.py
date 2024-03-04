@@ -1,12 +1,5 @@
-import math
-from datetime import datetime
 from unittest.mock import patch
 
-from app.core.config import setting
-from app.core.exceptions import AuthError
-from app.core.security import decode_jwt
-from app.entities.user import User
-from app.schema.auth_schema import SignUpSchema, SignInSchema
 from tests.factories.user_factory import UserEntityFactory
 
 PASSWORD = "S0meR4ndOmP!asworD987234"
