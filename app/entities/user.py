@@ -9,6 +9,8 @@ from app.entities.exceptions import InvalidDataException
 
 class User(BaseEntity):
     email = Column(String, nullable=False, unique=True)
+    password = Column(String, nullable=False)
+    user_token = Column(String, nullable=False)
 
     @validates('email')
     def validate_email(self, key, email):
