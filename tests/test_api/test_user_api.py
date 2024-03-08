@@ -1,19 +1,15 @@
 from pydantic import ValidationError
 from starlette import status
 
-from tests.conftest import db, client
-
 from app.schema.user_schema import CurrentUserSchema
 from tests.factories.user_factory import UserFactory
 
 
-def test_get_current_authenticated_user(client, db):
+def test_get_current_authenticated_user(client, db_session, container):
     email = "mohi@gmail.com"
     password = "123456789"
 
-    UserFactory._meta.sqlalchemy_session = db
-
-    user = UserFactory(email=email, password=password, logged_in=True)
+    user = UserFactory(email=email, password=password, logged_in=True, session=db_session)
     headers = {
         "Authorization": f"Bearer {user.access_token}"
     }

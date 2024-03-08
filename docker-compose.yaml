@@ -3,17 +3,24 @@ version: '3.8'
 services:
   db:
     image: postgres:13
-    env_file:
-      - .env
+    environment:
+      POSTGRES_DB: ${DB}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
 
   redis:
     image: redis:alpine
+    #TODO remove port
+    ports:
+      - 6379:6379
 
   web:
     build: .
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
       - .:/code
     ports:

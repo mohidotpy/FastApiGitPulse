@@ -8,7 +8,7 @@ from starlette import status
 
 from app.schema.user_schema import FindUserSchema
 from tests.factories.user_factory import UserFactory
-
+EMAIL =
 
 def test_register_user_api_with_correct_data(client, db_session, container):
     data = {"email": "mohidotpy@gmail.com", "password": "123456789"}
